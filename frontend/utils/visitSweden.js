@@ -134,25 +134,15 @@ function extractFromGraph(graph) {
  * @param {string} [options.type] - "place" | "food" | "lodging" | "event" | "store" | "all"
  * @returns {Promise<Array>} Results sorted by distance, with walkMin and distanceM
  */
-export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all" } = {}) {
-  let typeQuery;
-  if (type === "all") {
-    const uris = Object.values(TYPES).map((u) => `rdfType:${escapeUri(u)}`);
-    typeQuery = `(${uris.join("+OR+")})`;
-  } else {
-    const uri = TYPES[type];
-    if (!uri) throw new Error(`Unknown type: ${type}`);
-    typeQuery = `rdfType:${escapeUri(uri)}`;
-  }
-
-  const query = `public:true+AND+${typeQuery}`;
+/**
+ * Fetch one type from Visit Sweden, filter by distance
+ */
+async function fetchType(typeUri, lat, lon, maxDistM) {
+  const query = `public:true+AND+rdfType:${escapeUri(typeUri)}`;
   const url = `${BASE}/search?type=solr&query=${query}&limit=100&rdfFormat=application/ld%2Bjson`;
-
   const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Visit Sweden API error: ${resp.status}`);
+  if (!resp.ok) return [];
   const data = await resp.json();
-
-  const maxDistM = maxWalkMin * 80; // 80m per minute walking
   const children = data?.resource?.children || [];
 
   return children
@@ -177,6 +167,31 @@ export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all
         return null;
       }
     })
-    .filter(Boolean)
-    .sort((a, b) => a.distanceM - b.distanceM);
+    .filter(Boolean);
+}
+
+export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all" } = {}) {
+  const maxDistM = maxWalkMin * 80;
+
+  if (type !== "all") {
+    const uri = TYPES[type];
+    if (!uri) throw new Error(`Unknown type: ${type}`);
+    const results = await fetchType(uri, lat, lon, maxDistM);
+    return results.sort((a, b) => a.distanceM - b.distanceM);
+  }
+
+  // For "all": fetch every type in parallel, combine, dedupe by name+lat
+  const allResults = await Promise.all(
+    Object.values(TYPES).map((uri) => fetchType(uri, lat, lon, maxDistM))
+  );
+
+  const seen = new Set();
+  const combined = allResults.flat().filter((item) => {
+    const key = `${item.name}|${item.lat}|${item.lon}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return combined.sort((a, b) => a.distanceM - b.distanceM);
 }
