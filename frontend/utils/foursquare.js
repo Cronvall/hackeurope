@@ -1,30 +1,27 @@
 /**
  * Foursquare Places API client — geo-search near charging stations
- * Docs: https://docs.foursquare.com/reference/place-search
+ * Uses the new places-api.foursquare.com endpoint (migrated June 2025)
+ * Docs: https://docs.foursquare.com/developer/reference/places-api-overview
  *
  * Native radius search — far denser data than Visit Sweden.
  * Walking estimate: straight-line × 1.4 detour factor, 80m/min.
  */
 
-const BASE = "https://api.foursquare.com/v3/places/search";
+// In dev, Vite proxies /api/foursquare → places-api.foursquare.com (avoids CORS)
+// In production, use the direct URL (server-side or CORS-enabled deployment)
+const BASE = import.meta.env.DEV
+  ? "/api/foursquare/places/search"
+  : "https://places-api.foursquare.com/places/search";
 const API_KEY = import.meta.env.VITE_FOURSQUARE_API_KEY;
+const API_VERSION = "2025-06-17";
 
-// Foursquare category IDs (v3)
-// Full taxonomy: https://docs.foursquare.com/data-products/docs/categories
+// Foursquare category IDs
 const CATEGORY_IDS = {
   food: "13000",        // Dining and Drinking
   place: "16000",       // Landmarks and Outdoors
   lodging: "19014",     // Lodging
-  event: "14000",       // Arts and Entertainment (closest to events)
+  event: "14000",       // Arts and Entertainment
   store: "17000",       // Retail
-};
-
-const CATEGORY_DISPLAY = {
-  food: { icon: "\u{1F37D}\uFE0F", label: "Dining", type: "food" },
-  place: { icon: "\u{1F4CD}", label: "Place", type: "place" },
-  lodging: { icon: "\u{1F3E8}", label: "Stay", type: "lodging" },
-  event: { icon: "\u{1F3AD}", label: "Entertainment", type: "event" },
-  store: { icon: "\u{1F6CD}\uFE0F", label: "Shopping", type: "store" },
 };
 
 // Map Foursquare top-level category IDs to our display types
@@ -33,7 +30,7 @@ function categorize(categories) {
     return { icon: "\u{1F4CD}", label: "Place", type: "place" };
   }
   const cat = categories[0];
-  const id = String(cat.id);
+  const id = String(cat.fsq_category_id || "");
 
   if (id.startsWith("13")) return { icon: "\u{1F37D}\uFE0F", label: cat.name || "Dining", type: "food" };
   if (id.startsWith("14")) return { icon: "\u{1F3AD}", label: cat.name || "Entertainment", type: "event" };
@@ -73,7 +70,6 @@ export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all
   }
 
   // Convert max walk time to radius in meters (reverse the detour factor)
-  // maxWalkMin * 80m/min = real distance, / 1.4 = straight-line ≈ API distance
   const radiusMeters = Math.round((maxWalkMin * 80) / DETOUR_FACTOR);
 
   const params = new URLSearchParams({
@@ -81,7 +77,6 @@ export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all
     radius: String(radiusMeters),
     sort: "DISTANCE",
     limit: "50",
-    fields: "fsq_id,name,location,geocodes,categories,photos,rating,hours,distance,website,tel,description",
   });
 
   // Add category filter for specific types
@@ -91,7 +86,11 @@ export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all
 
   const url = `${BASE}?${params}`;
   const resp = await fetch(url, {
-    headers: { Authorization: API_KEY, Accept: "application/json" },
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      Accept: "application/json",
+      "X-Places-Api-Version": API_VERSION,
+    },
   });
 
   if (!resp.ok) {
@@ -109,21 +108,20 @@ export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all
 
       const photo = place.photos && place.photos.length > 0 ? place.photos[0] : null;
       const category = categorize(place.categories);
-      const geo = place.geocodes?.main;
 
       return {
         name: place.name,
-        description: place.categories?.map((c) => c.name).join(" · ") || "",
-        fullDescription: place.description || place.categories?.map((c) => c.name).join(" · ") || "",
+        description: place.categories?.map((c) => c.name).join(" \u00B7 ") || "",
+        fullDescription: place.description || place.categories?.map((c) => c.name).join(" \u00B7 ") || "",
         image: photoUrl(photo),
-        lat: geo?.latitude || lat,
-        lon: geo?.longitude || lon,
+        lat: place.latitude || lat,
+        lon: place.longitude || lon,
         category,
         categoryKey: place.categories?.[0]?.name || "",
         url: place.website || null,
         region: place.location?.locality || place.location?.region || "",
-        entryId: place.fsq_id,
-        contextId: place.fsq_id,
+        entryId: place.fsq_place_id,
+        contextId: place.fsq_place_id,
         // Distances
         distanceM: walk.realMeters,
         walkMin: walk.minutes,

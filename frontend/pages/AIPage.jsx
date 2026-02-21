@@ -1,81 +1,12 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AI_EV_MODELS } from "../data/evModels";
 import { AI_TRAVELER_MAP } from "../data/travelerTypes";
 import { AGENT_PROMPTS } from "../data/agentPrompts";
-import { planTrip, parseUserIntent, generateAISummary } from "../utils/tripPlanner";
+import { planTrip, parseUserIntent, getNextQuestionStatic } from "../utils/tripPlanner";
 import { loadEvSettings } from "../utils/storage";
 import Icons from "../components/Icons";
-import { CongestionBadge, QuickChips } from "../components/SmallComponents";
-
-// ── Trip Plan Card ──
-function TripPlanCard({ plan, tripParams }) {
-  if (!plan || !plan.stops || plan.stops.length === 0) return null;
-  return (
-    <div style={{
-      background: "#fff", border: "2px solid var(--forest)",
-      borderRadius: 16, padding: 20, marginBottom: 16,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: "var(--forest)", display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <Icons.Navigation size={16} color="#fff" />
-        </div>
-        <div>
-          <h3 style={{ color: "var(--ink)", fontSize: 16, fontWeight: 700, margin: 0 }}>Your Optimized Route</h3>
-          <p style={{ color: "var(--ink-muted)", fontSize: 12, margin: 0 }}>
-            Stockholm → Gothenburg · {plan.totalDistance}km · {plan.stops.length} charging stop{plan.stops.length > 1 ? "s" : ""}
-            {plan.arrivalEstimate && ` · ETA ${plan.arrivalEstimate}`}
-          </p>
-        </div>
-      </div>
-
-      <div style={{ position: "relative", paddingLeft: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 12, height: 12, borderRadius: 6, background: "var(--forest)", position: "absolute", left: 0 }} />
-          <div>
-            <span style={{ color: "var(--forest)", fontSize: 13, fontWeight: 600 }}>Stockholm</span>
-            <span style={{ color: "var(--ink-muted)", fontSize: 12, marginLeft: 8 }}>
-              {tripParams?.departure || "Departure"} · {tripParams?.soc || 90}% battery
-            </span>
-          </div>
-        </div>
-
-        {plan.stops.map((stop, i) => (
-          <div key={stop.id} style={{ marginBottom: 20, position: "relative" }}>
-            <div style={{ position: "absolute", left: 0, top: 0, bottom: -20, width: 2, background: "var(--border)", marginLeft: 5 }} />
-            <div style={{ width: 12, height: 12, borderRadius: 6, background: "var(--forest)", position: "absolute", left: 0 }} />
-            <div style={{ paddingLeft: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ color: "var(--ink)", fontSize: 14, fontWeight: 600 }}>{stop.name}</span>
-                <CongestionBadge level={stop.congestionLevel} />
-              </div>
-              <p style={{ color: "var(--ink-muted)", fontSize: 12, margin: "4px 0 0" }}>
-                {stop.km_from_start}km · {stop.max_kw}kW · ~25 min charge
-              </p>
-              {stop.community_tips.length > 0 && (
-                <p style={{ color: "var(--purple)", fontSize: 12, margin: "4px 0 0", fontStyle: "italic" }}>
-                  {stop.community_tips.sort((a, b) => b.votes - a.votes)[0].text.slice(0, 80)}...
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 12, height: 12, borderRadius: 6, background: "var(--red)", position: "absolute", left: 0 }} />
-          <div style={{ paddingLeft: 20 }}>
-            <span style={{ color: "var(--red)", fontSize: 13, fontWeight: 600 }}>Gothenburg</span>
-            <span style={{ color: "var(--ink-muted)", fontSize: 12, marginLeft: 8 }}>
-              {plan.arrivalEstimate ? `ETA ${plan.arrivalEstimate}` : "~4.5-5h total"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { QuickChips } from "../components/SmallComponents";
+import TripPlanCard from "../components/TripPlanCard";
 
 // ── Main AI Page ──
 export default function AIPage({ user }) {
@@ -326,40 +257,4 @@ export default function AIPage({ user }) {
       </div>
     </div>
   );
-}
-
-// Static version of getNextQuestion (no hook deps)
-function getNextQuestionStatic(params) {
-  if (!params.ev) return { content: AGENT_PROMPTS.greeting, chips: AI_EV_MODELS.slice(0, 6).map(ev => ev.name) };
-  if (!params.soc) return { content: AGENT_PROMPTS.askSoc(params.ev), chips: ["100%", "90%", "80%", "70%", "50%"] };
-  if (!params.travelerType) return {
-    content: AGENT_PROMPTS.askTraveler,
-    chips: Object.keys(AI_TRAVELER_MAP).map(t => ({ label: `${AI_TRAVELER_MAP[t].emoji} ${t}`, value: t })),
-  };
-  if (!params.travelDay) return {
-    content: AGENT_PROMPTS.askDay,
-    chips: [
-      { label: "Holiday (Midsommar, etc)", value: "holiday" },
-      { label: "Weekend", value: "weekend" },
-      { label: "Weekday", value: "weekday" },
-    ],
-  };
-  if (!params.priorities || params.priorities.length === 0) return {
-    content: AGENT_PROMPTS.askPriorities,
-    chips: [
-      { label: "Fastest charging", value: "speed" },
-      { label: "Avoid queues", value: "avoid_queues" },
-      { label: "Best amenities", value: "amenities" },
-    ],
-  };
-  if (!params.departure) return {
-    content: AGENT_PROMPTS.askDeparture,
-    chips: [
-      { label: "07:00 — Early bird", value: "07:00" },
-      { label: "09:00 — Morning", value: "09:00" },
-      { label: "12:00 — Noon", value: "12:00" },
-      { label: "15:00 — Afternoon", value: "15:00" },
-    ],
-  };
-  return null;
 }

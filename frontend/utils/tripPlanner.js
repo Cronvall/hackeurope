@@ -1,6 +1,7 @@
 import { AI_STATIONS } from "../data/stations";
 import { AI_EV_MODELS } from "../data/evModels";
 import { AI_TRAVELER_MAP } from "../data/travelerTypes";
+import { AGENT_PROMPTS } from "../data/agentPrompts";
 
 export function generateAISummary(station) {
   const tips = station.community_tips;
@@ -106,6 +107,41 @@ function calculateArrival(departure, numStops) {
   const arrivalH = h + Math.floor((m + totalMinutes) / 60);
   const arrivalM = (m + totalMinutes) % 60;
   return `${String(arrivalH % 24).padStart(2, "0")}:${String(arrivalM).padStart(2, "0")}`;
+}
+
+export function getNextQuestionStatic(params) {
+  if (!params.ev) return { content: AGENT_PROMPTS.greeting, chips: AI_EV_MODELS.slice(0, 6).map(ev => ev.name) };
+  if (!params.soc) return { content: AGENT_PROMPTS.askSoc(params.ev), chips: ["100%", "90%", "80%", "70%", "50%"] };
+  if (!params.travelerType) return {
+    content: AGENT_PROMPTS.askTraveler,
+    chips: Object.keys(AI_TRAVELER_MAP).map(t => ({ label: `${AI_TRAVELER_MAP[t].emoji} ${t}`, value: t })),
+  };
+  if (!params.travelDay) return {
+    content: AGENT_PROMPTS.askDay,
+    chips: [
+      { label: "Holiday (Midsommar, etc)", value: "holiday" },
+      { label: "Weekend", value: "weekend" },
+      { label: "Weekday", value: "weekday" },
+    ],
+  };
+  if (!params.priorities || params.priorities.length === 0) return {
+    content: AGENT_PROMPTS.askPriorities,
+    chips: [
+      { label: "Fastest charging", value: "speed" },
+      { label: "Avoid queues", value: "avoid_queues" },
+      { label: "Best amenities", value: "amenities" },
+    ],
+  };
+  if (!params.departure) return {
+    content: AGENT_PROMPTS.askDeparture,
+    chips: [
+      { label: "07:00 — Early bird", value: "07:00" },
+      { label: "09:00 — Morning", value: "09:00" },
+      { label: "12:00 — Noon", value: "12:00" },
+      { label: "15:00 — Afternoon", value: "15:00" },
+    ],
+  };
+  return null;
 }
 
 export function parseUserIntent(message) {

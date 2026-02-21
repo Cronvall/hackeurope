@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import GlobalStyles from "./components/GlobalStyles";
 import BottomNav from "./components/BottomNav";
 import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
 import AIPage from "./pages/AIPage";
 import ProfilePage from "./pages/ProfilePage";
-import { SEED_EXPERIENCES } from "./data/experiences";
 import { loadSubmissions, saveSubmissions, loadSession } from "./utils/storage";
 import Icons from "./components/Icons";
 
@@ -19,12 +18,6 @@ export default function App() {
   useEffect(() => {
     loadSession().then(s => { if (s) setUser(s); });
     loadSubmissions().then(s => setSubmissions(s));
-  }, []);
-
-  const allExperiences = [...SEED_EXPERIENCES, ...submissions];
-
-  const handleVote = useCallback(async (id, newCount) => {
-    setSubmissions(prev => prev.map(s => s.id === id ? { ...s, votes: newCount } : s));
   }, []);
 
   const handleSubmit = async (submission) => {
@@ -79,8 +72,6 @@ export default function App() {
           <ExplorePage
             selectedStation={selectedStation}
             onChangeStation={setSelectedStation}
-            allExperiences={allExperiences}
-            onVote={handleVote}
           />
         )}
         {activePage === "ai" && (
