@@ -63,6 +63,28 @@ export default function RecommendationCard({ item }) {
           >
             {cat.icon} {cat.label}
           </div>
+          {/* Rating badge */}
+          {item.rating != null && (
+            <div
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                background: "rgba(0,0,0,0.65)",
+                backdropFilter: "blur(8px)",
+                borderRadius: 8,
+                padding: "4px 8px",
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#fbbf24",
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              {"\u2605"} {(item.rating / 2).toFixed(1)}
+            </div>
+          )}
           {item.region && (
             <div
               style={{
@@ -92,7 +114,7 @@ export default function RecommendationCard({ item }) {
             gap: 8,
           }}
         >
-          <span style={{ fontSize: 28 }}>{cat.icon || "📍"}</span>
+          <span style={{ fontSize: 28 }}>{cat.icon || "\u{1F4CD}"}</span>
           {item.region && (
             <span
               style={{
@@ -122,15 +144,40 @@ export default function RecommendationCard({ item }) {
           {item.name}
         </div>
 
-        {/* Walking distance */}
+        {/* Walking distance + open status */}
         {item.walkMin != null && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "var(--forest)", fontWeight: 600, background: "var(--forest-pale)", padding: "2px 7px", borderRadius: 4 }}>
               {"\u{1F6B6}"} {item.walkMin} min walk
             </span>
             <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "var(--ink-muted)" }}>
               {item.distanceM >= 1000 ? `${(item.distanceM / 1000).toFixed(1)} km` : `${item.distanceM} m`}
             </span>
+            {item.openNow != null && (
+              <span style={{
+                fontSize: 10,
+                fontFamily: "'JetBrains Mono',monospace",
+                fontWeight: 600,
+                padding: "2px 7px",
+                borderRadius: 4,
+                background: item.openNow ? "#dcfce7" : "#fef2f2",
+                color: item.openNow ? "#16a34a" : "#dc2626",
+              }}>
+                {item.openNow ? "Open now" : "Closed"}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Address */}
+        {item.address && (
+          <div style={{
+            fontSize: 11,
+            color: "var(--ink-muted)",
+            marginBottom: 6,
+            fontFamily: "'JetBrains Mono',monospace",
+          }}>
+            {item.address}
           </div>
         )}
 
@@ -168,6 +215,21 @@ export default function RecommendationCard({ item }) {
               {cat.icon} {cat.label}
             </span>
           )}
+          {item.rating != null && !item.image && (
+            <span
+              style={{
+                fontSize: 10,
+                padding: "3px 8px",
+                borderRadius: 6,
+                background: "#fef9c3",
+                color: "#a16207",
+                fontWeight: 600,
+                fontFamily: "'JetBrains Mono',monospace",
+              }}
+            >
+              {"\u2605"} {(item.rating / 2).toFixed(1)}
+            </span>
+          )}
           <span
             style={{
               fontSize: 10,
@@ -179,7 +241,7 @@ export default function RecommendationCard({ item }) {
               fontFamily: "'JetBrains Mono',monospace",
             }}
           >
-            Visit Sweden
+            Foursquare
           </span>
           {item.url && (
             <a
@@ -197,13 +259,13 @@ export default function RecommendationCard({ item }) {
                 fontWeight: 500,
               }}
             >
-              Website ↗
+              {"Website \u2197"}
             </a>
           )}
         </div>
 
-        {/* Coordinates (shown when expanded) */}
-        {expanded && item.lat && item.lon && (
+        {/* Expanded details */}
+        {expanded && (
           <div
             style={{
               marginTop: 12,
@@ -213,12 +275,26 @@ export default function RecommendationCard({ item }) {
               color: "var(--ink-muted)",
               fontFamily: "'JetBrains Mono',monospace",
               display: "flex",
-              gap: 12,
+              flexDirection: "column",
+              gap: 6,
             }}
           >
-            <span>📍 {item.lat.toFixed(4)}, {item.lon.toFixed(4)}</span>
-            {item.categoryKey && (
-              <span style={{ opacity: 0.7 }}>{item.categoryKey}</span>
+            <div style={{ display: "flex", gap: 12 }}>
+              {item.lat && item.lon && (
+                <span>{"\u{1F4CD}"} {item.lat.toFixed(4)}, {item.lon.toFixed(4)}</span>
+              )}
+              {item.categoryKey && (
+                <span style={{ opacity: 0.7 }}>{item.categoryKey}</span>
+              )}
+            </div>
+            {item.phone && (
+              <a
+                href={`tel:${item.phone}`}
+                onClick={(e) => e.stopPropagation()}
+                style={{ color: "var(--forest)", textDecoration: "none" }}
+              >
+                {"\u{1F4DE}"} {item.phone}
+              </a>
             )}
           </div>
         )}

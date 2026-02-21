@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { CHARGING_STATIONS } from "../data/stations";
 import RecommendationCard from "../components/RecommendationCard";
-import { searchNearStation } from "../utils/visitSweden";
+import { searchNearStation } from "../utils/foursquare";
 
 const TYPE_FILTERS = [
   { id: "all", label: "All", icon: "\u{1F30D}" },
@@ -177,7 +177,7 @@ export default function ExplorePage({ selectedStation, onChangeStation }) {
       {/* Results count + source */}
       {!loading && !error && (
         <div style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ background: "#006AA7", color: "#fff", padding: "2px 6px", borderRadius: 4, fontWeight: 600, fontSize: 9 }}>Visit Sweden</span>
+          <span style={{ background: "#8b2eff", color: "#fff", padding: "2px 6px", borderRadius: 4, fontWeight: 600, fontSize: 9 }}>Foursquare</span>
           <span>{results.length} place{results.length !== 1 ? "s" : ""} within walking distance</span>
         </div>
       )}
@@ -216,7 +216,7 @@ export default function ExplorePage({ selectedStation, onChangeStation }) {
             No places found nearby
           </div>
           <p style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.6 }}>
-            Visit Sweden doesn't have listings within 15 minutes of this station yet.
+            No listings found within 15 minutes of this station.
             Try a different station or category.
           </p>
         </div>
