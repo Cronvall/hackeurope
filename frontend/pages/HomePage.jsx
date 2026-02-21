@@ -119,7 +119,7 @@ function StopDetail({ stop, onClose }) {
 }
 
 // ─── Main Home Page ──
-export default function HomePage() {
+export default function HomePage({ onSelectStation }) {
   const [route, setRoute] = useState("sthlm-gbg");
   const [ev, setEv] = useState("tesla-m3");
   const [chargeDuration, setChargeDuration] = useState(40);
@@ -223,8 +223,16 @@ export default function HomePage() {
                   {station.amenities.map(a => <Tag key={a}>{a}</Tag>)}
                 </div>
 
-                <div style={{ marginTop: 8, fontSize: 10, color: isActive ? "var(--forest)" : "var(--ink-muted)", fontFamily: "'JetBrains Mono',monospace", textAlign: "center" }}>
-                  {isActive ? "Close details" : "View details"}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                  <div style={{ fontSize: 10, color: isActive ? "var(--forest)" : "var(--ink-muted)", fontFamily: "'JetBrains Mono',monospace" }}>
+                    {isActive ? "Close details" : "View details"}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectStation(station); }}
+                    style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--forest)", background: "var(--forest-pale)", color: "var(--forest)", cursor: "pointer", fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}
+                  >
+                    Explore nearby →
+                  </button>
                 </div>
               </div>
             );

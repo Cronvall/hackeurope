@@ -122,6 +122,18 @@ export default function RecommendationCard({ item }) {
           {item.name}
         </div>
 
+        {/* Walking distance */}
+        {item.walkMin != null && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "var(--forest)", fontWeight: 600, background: "var(--forest-pale)", padding: "2px 7px", borderRadius: 4 }}>
+              {"\u{1F6B6}"} {item.walkMin} min walk
+            </span>
+            <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "var(--ink-muted)" }}>
+              {item.distanceM >= 1000 ? `${(item.distanceM / 1000).toFixed(1)} km` : `${item.distanceM} m`}
+            </span>
+          </div>
+        )}
+
         <p
           style={{
             fontSize: 13,

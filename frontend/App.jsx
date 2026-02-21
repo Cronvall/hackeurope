@@ -13,6 +13,7 @@ export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [user, setUser] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [selectedStation, setSelectedStation] = useState(null);
 
   // Load session + submissions on mount
   useEffect(() => {
@@ -72,10 +73,12 @@ export default function App() {
       {/* Page Content */}
       <main style={{ paddingBottom: 60 }}>
         {activePage === "home" && (
-          <HomePage />
+          <HomePage onSelectStation={(station) => { setSelectedStation(station); setActivePage("explore"); }} />
         )}
         {activePage === "explore" && (
           <ExplorePage
+            selectedStation={selectedStation}
+            onChangeStation={setSelectedStation}
             allExperiences={allExperiences}
             onVote={handleVote}
           />

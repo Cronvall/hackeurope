@@ -1,7 +1,10 @@
 /**
- * Visit Sweden API client
+ * Visit Sweden API client — geo-filtered recommendations
  * Docs: https://docs.visitsweden.com/en/api/
  * Base: https://data.visitsweden.com/store/
+ *
+ * The API doesn't support geo-queries, so we fetch broadly
+ * and filter client-side by walking distance (~1.2km = 15 min).
  */
 
 const BASE = "https://data.visitsweden.com/store";
@@ -14,40 +17,56 @@ const TYPES = {
   store: "http://schema.org/Store",
 };
 
-// Map Visit Sweden categories to our experience types
 const CATEGORY_MAP = {
-  Restaurant: { type: "food", icon: "🍽️", label: "Restaurant" },
-  CafeOrCoffeeShop: { type: "food", icon: "☕", label: "Cafe" },
-  BarOrPub: { type: "food", icon: "🍺", label: "Bar" },
-  FastFoodRestaurant: { type: "food", icon: "🍔", label: "Fast Food" },
-  FoodEstablishment: { type: "food", icon: "🍽️", label: "Dining" },
-  Museum: { type: "culture", icon: "🏛️", label: "Museum" },
-  Park: { type: "nature", icon: "🌿", label: "Park" },
-  NaturalFeature: { type: "nature", icon: "🏔️", label: "Nature" },
-  TouristAttraction: { type: "activity", icon: "📸", label: "Attraction" },
-  LandmarksOrHistoricalBuildings: { type: "culture", icon: "🏰", label: "Landmark" },
-  CivicStructure: { type: "culture", icon: "🏛️", label: "Civic" },
-  ExerciseAction: { type: "activity", icon: "🏃", label: "Activity" },
-  SportsActivityLocation: { type: "activity", icon: "⚽", label: "Sports" },
-  Store: { type: "shopping", icon: "🛍️", label: "Shopping" },
-  LodgingBusiness: { type: "lodging", icon: "🏨", label: "Accommodation" },
-  Campground: { type: "nature", icon: "⛺", label: "Camping" },
+  Restaurant: { type: "food", icon: "\u{1F37D}\uFE0F", label: "Restaurant" },
+  CafeOrCoffeeShop: { type: "food", icon: "\u2615", label: "Cafe" },
+  BarOrPub: { type: "food", icon: "\u{1F37A}", label: "Bar" },
+  FastFoodRestaurant: { type: "food", icon: "\u{1F354}", label: "Fast Food" },
+  FoodEstablishment: { type: "food", icon: "\u{1F37D}\uFE0F", label: "Dining" },
+  Museum: { type: "culture", icon: "\u{1F3DB}\uFE0F", label: "Museum" },
+  Park: { type: "nature", icon: "\u{1F33F}", label: "Park" },
+  NaturalFeature: { type: "nature", icon: "\u{1F3D4}\uFE0F", label: "Nature" },
+  TouristAttraction: { type: "activity", icon: "\u{1F4F8}", label: "Attraction" },
+  LandmarksOrHistoricalBuildings: { type: "culture", icon: "\u{1F3F0}", label: "Landmark" },
+  CivicStructure: { type: "culture", icon: "\u{1F3DB}\uFE0F", label: "Civic" },
+  ExerciseAction: { type: "activity", icon: "\u{1F3C3}", label: "Activity" },
+  SportsActivityLocation: { type: "activity", icon: "\u26BD", label: "Sports" },
+  Store: { type: "shopping", icon: "\u{1F6CD}\uFE0F", label: "Shopping" },
+  LodgingBusiness: { type: "lodging", icon: "\u{1F3E8}", label: "Accommodation" },
+  Campground: { type: "nature", icon: "\u26FA", label: "Camping" },
 };
 
 function escapeUri(uri) {
   return uri.replace(/:/g, "\\:");
 }
 
-function extractFromGraph(graph) {
-  const main = graph.find(
-    (n) =>
-      n["@type"] &&
-      (n["@type"].includes("schema:") || String(n["@type"]).startsWith("schema:"))
-  ) || graph[0];
+/** Haversine distance in meters */
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-  const geo = graph.find(
-    (n) => n["@type"] === "schema:GeoCoordinates"
-  );
+/** Estimate walking time in minutes (avg 80m/min ~ 5km/h) */
+function walkingMinutes(meters) {
+  return Math.round(meters / 80);
+}
+
+function extractFromGraph(graph) {
+  const main =
+    graph.find(
+      (n) =>
+        n["@type"] &&
+        (n["@type"].includes("schema:") ||
+          String(n["@type"]).startsWith("schema:"))
+    ) || graph[0];
+
+  const geo = graph.find((n) => n["@type"] === "schema:GeoCoordinates");
 
   const name = main["schema:name"];
   const nameStr =
@@ -71,17 +90,8 @@ function extractFromGraph(graph) {
   const image = main["schema:image"];
   const imageUrl = image?.["@id"] || (typeof image === "string" ? image : null);
 
-  const photos = main["schema:photo"];
-  const photoUrls = Array.isArray(photos)
-    ? photos.map((p) => p["@id"] || p).filter(Boolean).slice(0, 3)
-    : [];
-
-  const lat = parseFloat(
-    geo?.["schema:latitude"] || main["schema:latitude"] || 0
-  );
-  const lon = parseFloat(
-    geo?.["schema:longitude"] || main["schema:longitude"] || 0
-  );
+  const lat = parseFloat(geo?.["schema:latitude"] || main["schema:latitude"] || 0);
+  const lon = parseFloat(geo?.["schema:longitude"] || main["schema:longitude"] || 0);
 
   const additionalType = main["schema:additionalType"];
   const categoryRaw = additionalType?.["@id"] || (typeof additionalType === "string" ? additionalType : "");
@@ -92,24 +102,20 @@ function extractFromGraph(graph) {
 
   const matched = CATEGORY_MAP[categoryKey] || CATEGORY_MAP[typeKey] || {
     type: "activity",
-    icon: "📍",
+    icon: "\u{1F4CD}",
     label: categoryKey || typeKey || "Place",
   };
 
   const url = main["schema:url"]?.["@id"] || main["schema:url"] || null;
 
   const region = main["dcterms:spatial"];
-  const regionStr =
-    typeof region === "string"
-      ? region
-      : region?.["@value"] || "";
+  const regionStr = typeof region === "string" ? region : region?.["@value"] || "";
 
   return {
     name: nameStr,
-    description: descStr.slice(0, 300) + (descStr.length > 300 ? "…" : ""),
+    description: descStr.slice(0, 300) + (descStr.length > 300 ? "\u2026" : ""),
     fullDescription: descStr,
     image: imageUrl,
-    photos: imageUrl ? [imageUrl, ...photoUrls] : photoUrls,
     lat,
     lon,
     category: matched,
@@ -120,14 +126,15 @@ function extractFromGraph(graph) {
 }
 
 /**
- * Search Visit Sweden for places/experiences
+ * Search Visit Sweden for places near a charging station
  * @param {object} options
+ * @param {number} options.lat - Station latitude
+ * @param {number} options.lon - Station longitude
+ * @param {number} [options.maxWalkMin] - Max walking minutes (default 15)
  * @param {string} [options.type] - "place" | "food" | "lodging" | "event" | "store" | "all"
- * @param {number} [options.limit] - Max results (max 100)
- * @param {number} [options.offset] - Pagination offset
- * @returns {Promise<{results: Array, total: number}>}
+ * @returns {Promise<Array>} Results sorted by distance, with walkMin and distanceM
  */
-export async function searchVisitSweden({ type = "all", limit = 20, offset = 0 } = {}) {
+export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all" } = {}) {
   let typeQuery;
   if (type === "all") {
     const uris = Object.values(TYPES).map((u) => `rdfType:${escapeUri(u)}`);
@@ -139,21 +146,30 @@ export async function searchVisitSweden({ type = "all", limit = 20, offset = 0 }
   }
 
   const query = `public:true+AND+${typeQuery}`;
-  const url = `${BASE}/search?type=solr&query=${query}&limit=${limit}&offset=${offset}&rdfFormat=application/ld%2Bjson`;
+  const url = `${BASE}/search?type=solr&query=${query}&limit=100&rdfFormat=application/ld%2Bjson`;
 
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Visit Sweden API error: ${resp.status}`);
   const data = await resp.json();
 
-  const results = (data.results || [])
+  const maxDistM = maxWalkMin * 80; // 80m per minute walking
+  const children = data?.resource?.children || [];
+
+  return children
     .map((entry) => {
       try {
         const graph = entry?.metadata?.["@graph"];
         if (!graph || !Array.isArray(graph)) return null;
         const parsed = extractFromGraph(graph);
         if (!parsed.name || (!parsed.lat && !parsed.lon)) return null;
+
+        const dist = distanceMeters(lat, lon, parsed.lat, parsed.lon);
+        if (dist > maxDistM) return null;
+
         return {
           ...parsed,
+          distanceM: Math.round(dist),
+          walkMin: walkingMinutes(dist),
           entryId: entry.entryId,
           contextId: entry.contextId,
         };
@@ -161,25 +177,6 @@ export async function searchVisitSweden({ type = "all", limit = 20, offset = 0 }
         return null;
       }
     })
-    .filter(Boolean);
-
-  return { results, total: data.results?.length || 0 };
+    .filter(Boolean)
+    .sort((a, b) => a.distanceM - b.distanceM);
 }
-
-/**
- * Swedish regions along the E4 corridor (for filtering)
- */
-export const REGIONS = [
-  "Stockholm",
-  "Södermanland",
-  "Östergötland",
-  "Jönköping",
-  "Småland",
-  "Halland",
-  "Västra Götaland",
-  "Skåne",
-  "Gävleborg",
-  "Värmland",
-];
-
-export const VS_CATEGORIES = CATEGORY_MAP;
