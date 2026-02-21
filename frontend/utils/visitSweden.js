@@ -52,9 +52,16 @@ function distanceMeters(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Estimate walking time in minutes (avg 80m/min ~ 5km/h) */
-function walkingMinutes(meters) {
-  return Math.round(meters / 80);
+/**
+ * Estimate real walking distance & time from straight-line meters.
+ * Detour factor 1.4 accounts for roads not being straight lines.
+ * Walking speed: 80m/min (~5km/h).
+ */
+const DETOUR_FACTOR = 1.4;
+function walkingEstimate(straightLineMeters) {
+  const realMeters = Math.round(straightLineMeters * DETOUR_FACTOR);
+  const minutes = Math.round(realMeters / 80);
+  return { realMeters, minutes };
 }
 
 function extractFromGraph(graph) {
@@ -137,7 +144,7 @@ function extractFromGraph(graph) {
 /**
  * Fetch one type from Visit Sweden, filter by distance
  */
-async function fetchType(typeUri, lat, lon, maxDistM) {
+async function fetchType(typeUri, lat, lon, maxWalkMin) {
   const query = `public:true+AND+rdfType:${escapeUri(typeUri)}`;
   const url = `${BASE}/search?type=solr&query=${query}&limit=100&rdfFormat=application/ld%2Bjson`;
   const resp = await fetch(url);
@@ -153,13 +160,14 @@ async function fetchType(typeUri, lat, lon, maxDistM) {
         const parsed = extractFromGraph(graph);
         if (!parsed.name || (!parsed.lat && !parsed.lon)) return null;
 
-        const dist = distanceMeters(lat, lon, parsed.lat, parsed.lon);
-        if (dist > maxDistM) return null;
+        const straightLine = distanceMeters(lat, lon, parsed.lat, parsed.lon);
+        const walk = walkingEstimate(straightLine);
+        if (walk.minutes > maxWalkMin) return null;
 
         return {
           ...parsed,
-          distanceM: Math.round(dist),
-          walkMin: walkingMinutes(dist),
+          distanceM: walk.realMeters,
+          walkMin: walk.minutes,
           entryId: entry.entryId,
           contextId: entry.contextId,
         };
@@ -171,18 +179,17 @@ async function fetchType(typeUri, lat, lon, maxDistM) {
 }
 
 export async function searchNearStation({ lat, lon, maxWalkMin = 15, type = "all" } = {}) {
-  const maxDistM = maxWalkMin * 80;
 
   if (type !== "all") {
     const uri = TYPES[type];
     if (!uri) throw new Error(`Unknown type: ${type}`);
-    const results = await fetchType(uri, lat, lon, maxDistM);
+    const results = await fetchType(uri, lat, lon, maxWalkMin);
     return results.sort((a, b) => a.distanceM - b.distanceM);
   }
 
   // For "all": fetch every type in parallel, combine, dedupe by name+lat
   const allResults = await Promise.all(
-    Object.values(TYPES).map((uri) => fetchType(uri, lat, lon, maxDistM))
+    Object.values(TYPES).map((uri) => fetchType(uri, lat, lon, maxWalkMin))
   );
 
   const seen = new Set();
