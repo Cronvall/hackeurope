@@ -1,0 +1,42 @@
+{
+  "name": "Oscar",
+  "vehicle": {
+    "display": "Tesla Model Y",
+    "chargetrip_id": "61f1e0e544e154840f7371f9"
+  },
+  "home": {
+    "coordinates": [18.0686, 59.3293],
+    "name": "Stockholm"
+  },
+  "preferences": {
+    "amenities": ["coffee", "restaurant"],
+    "speed_tolerance": "relaxed",
+    "connector_preferred": "IEC_62196_T2_COMBO_2"
+  },
+  "history": [
+    {
+      "trip": "Stockholm \u2192 Gothenburg",
+      "date": "2025-01-15",
+      "chosen_route": "B",
+      "stops_chosen": [
+        {
+          "type": "coffee",
+          "station": "J\u00f6nk\u00f6ping Espresso House",
+          "over": "Shell Recharge Highway"
+        }
+      ]
+    },
+    {
+      "trip": "Stockholm \u2192 Malm\u00f6",
+      "date": "2025-02-01",
+      "chosen_route": "A",
+      "stops_chosen": [
+        {
+          "type": "fastest",
+          "station": "Ionity Link\u00f6ping",
+          "over": "Caf\u00e9 stop +12min"
+        }
+      ]
+    }
+  ]
+}
