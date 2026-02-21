@@ -16,7 +16,7 @@ Amenities enum:        park | restaurant | museum | coffee | hotel |
                        shopping | bathroom | supermarket | playground | pharmacy
 """
 
-from client import gql
+from .client import gql
 
 # ---------------------------------------------------------------------------
 # GraphQL documents

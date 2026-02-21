@@ -12,7 +12,7 @@ but polling is fine for scripting and experimentation.
 """
 
 import time
-from client import gql
+from .client import gql
 
 # ---------------------------------------------------------------------------
 # GraphQL documents

@@ -8,7 +8,7 @@ Key types (from schema introspection):
                         excluded (Boolean), excluded_countries ([String])
 """
 
-from client import gql
+from .client import gql
 
 # ---------------------------------------------------------------------------
 # GraphQL documents
