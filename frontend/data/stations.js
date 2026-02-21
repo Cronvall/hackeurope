@@ -90,8 +90,8 @@ export const AI_STATIONS = [
 
 // ─── V2: CHARGING STATIONS (experience platform) ───
 export const CHARGING_STATIONS = {
-  "cs-linkoping": { id: "cs-linkoping", name: "Linköping Travel Centre", city: "Linköping", lat: 58.4102, lng: 15.6248, power: "150 kW DC", connectors: ["CCS2", "CHAdeMO"], network: "IONITY", pricePerKwh: 0.79, numPoints: 6, available: 4, congestion: "low", amenities: ["Restroom", "Waiting area", "Café 200m"] },
-  "cs-jonkoping": { id: "cs-jonkoping", name: "Jönköping Elmia", city: "Jönköping", lat: 57.7806, lng: 14.1618, power: "150 kW DC", connectors: ["CCS2", "CHAdeMO", "Type 2"], network: "Recharge", pricePerKwh: 0.72, numPoints: 8, available: 6, congestion: "low", amenities: ["Restaurant", "Shop", "Restroom"] },
-  "cs-gavle": { id: "cs-gavle", name: "Gävle Travel Centre", city: "Gävle", lat: 60.6742, lng: 17.1443, power: "150 kW DC", connectors: ["CCS2", "CHAdeMO"], network: "IONITY", pricePerKwh: 0.79, numPoints: 4, available: 3, congestion: "low", amenities: ["Restroom", "Waiting area"] },
-  "cs-malmo": { id: "cs-malmo", name: "Malmö Central Station", city: "Malmö", lat: 55.6100, lng: 12.9985, power: "150 kW DC", connectors: ["CCS2", "CHAdeMO", "Type 2"], network: "Mer", pricePerKwh: 0.68, numPoints: 10, available: 7, congestion: "medium", amenities: ["Restaurant", "Shop", "Restroom", "Waiting area"] },
+  "cs-linkoping": { id: "cs-linkoping", name: "IONITY Linköping Tornby", city: "Linköping", lat: 58.4311, lng: 15.5843, power: "350 kW DC", connectors: ["CCS2"], network: "IONITY", pricePerKwh: 0.79, numPoints: 6, available: 4, congestion: "low", amenities: ["Circle K", "Restroom", "Shop"] },
+  "cs-jonkoping": { id: "cs-jonkoping", name: "Jönköping Elmia", city: "Jönköping", lat: 57.7880, lng: 14.2272, power: "7.4 kW AC", connectors: ["Type 2"], network: "Recharge", pricePerKwh: 0.72, numPoints: 8, available: 6, congestion: "low", amenities: ["Congress centre", "Restaurant", "Restroom"] },
+  "cs-gavle": { id: "cs-gavle", name: "IONITY Gävle", city: "Gävle", lat: 60.6678, lng: 17.0804, power: "350 kW DC", connectors: ["CCS2"], network: "IONITY", pricePerKwh: 0.79, numPoints: 6, available: 3, congestion: "low", amenities: ["Restroom"] },
+  "cs-malmo": { id: "cs-malmo", name: "Mer Malmö Derbyvägen", city: "Malmö", lat: 55.5785, lng: 13.0626, power: "50 kW DC", connectors: ["CCS2", "CHAdeMO", "Type 2"], network: "Mer", pricePerKwh: 0.68, numPoints: 1, available: 1, congestion: "medium", amenities: ["Parking"] },
 };
